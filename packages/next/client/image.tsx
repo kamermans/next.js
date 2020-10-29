@@ -407,6 +407,8 @@ function akamaiLoader({ root, src, width }: LoaderProps): string {
 }
 
 function imageengineLoader({ root, src, width, quality }: LoaderProps): string {
+  // No auto parameter is needed here since ImageEngine automatically chooses the best image format by default
+  // Parameters/directives docs: https://imageengine.io/docs/implementation/directives/#list-of-supported-directives
   const params = ['w_' + width]
   let paramsString = ''
   if (quality) {
@@ -414,6 +416,8 @@ function imageengineLoader({ root, src, width, quality }: LoaderProps): string {
   }
 
   if (params.length) {
+    // ImageEngine uses path separators "/" to delimit parameters so all image optimization commands are in the "imgeng"
+    // query parameter.  This avoids stomping on query parameters that should go back to the origin.
     paramsString = '?imgeng=/' + params.join('/')
   }
   return `${root}${normalizeSrc(src)}${paramsString}`
