@@ -7,11 +7,12 @@ type LoadingValue = typeof VALID_LOADING_VALUES[number]
 const loaders = new Map<LoaderKey, (props: LoaderProps) => string>([
   ['imgix', imgixLoader],
   ['cloudinary', cloudinaryLoader],
+  ['imageengine', imageengineLoader],
   ['akamai', akamaiLoader],
   ['default', defaultLoader],
 ])
 
-type LoaderKey = 'imgix' | 'cloudinary' | 'akamai' | 'default'
+type LoaderKey = 'imgix' | 'cloudinary' | 'imageengine' | 'akamai' | 'default'
 
 type ImageData = {
   deviceSizes: number[]
@@ -403,6 +404,19 @@ function imgixLoader({ root, src, width, quality }: LoaderProps): string {
 
 function akamaiLoader({ root, src, width }: LoaderProps): string {
   return `${root}${normalizeSrc(src)}?imwidth=${width}`
+}
+
+function imageengineLoader({ root, src, width, quality }: LoaderProps): string {
+  const params = ['w_' + width]
+  let paramsString = ''
+  if (quality) {
+    params.push('cmpr_' + (100 - quality))
+  }
+
+  if (params.length) {
+    paramsString = '?imgeng=/' + params.join('/')
+  }
+  return `${root}${normalizeSrc(src)}${paramsString}`
 }
 
 function cloudinaryLoader({ root, src, width, quality }: LoaderProps): string {
