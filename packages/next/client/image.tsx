@@ -410,17 +410,54 @@ function imageengineLoader({ root, src, width, quality }: LoaderProps): string {
   // No auto parameter is needed here since ImageEngine automatically chooses the best image format by default
   // Parameters/directives docs: https://imageengine.io/docs/implementation/directives/#list-of-supported-directives
   const params = ['w_' + width]
-  let paramsString = ''
   if (quality) {
     params.push('cmpr_' + (100 - quality))
   }
 
-  if (params.length) {
+  let newSrc = normalizeSrc(src)
+  let srcParts = newSrc.split('?', 2)
+
+  // If there are no existing URL parameters, there is nothing to merge
+  if (srcParts.length === 1) {
     // ImageEngine uses path separators "/" to delimit parameters so all image optimization commands are in the "imgeng"
     // query parameter.  This avoids stomping on query parameters that should go back to the origin.
-    paramsString = '?imgeng=/' + params.join('/')
+    return `${root}${newSrc}?imgeng=/${params.join('/')}`
   }
-  return `${root}${normalizeSrc(src)}${paramsString}`
+
+  // The URL has parameters; decompose the URL and merge in the new ImageEngine directives
+  newSrc = srcParts[0]
+  const newParams = new URLSearchParams(srcParts[1])
+
+  let imgengString = newParams.get('imgeng')
+  if (imgengString === null) {
+    // There is no existing ImageEngine directives string, add the parameters and send it
+    const paramsString = '&imgeng=/' + params.join('/')
+    return `${root}${newSrc}${paramsString}`
+  }
+
+  // Rebuild the directives list with the provided width and quality
+  for (const imgengPart in imgengString.split('/')) {
+    if (!imgengPart.length) {
+      // Discard empty parts
+      continue
+    }
+
+    if (imgengPart.match(/^w_/)) {
+      // Override the width with the one from the Image component
+      continue
+    }
+
+    if (quality && imgengPart.match(/^cmpr_/)) {
+      // Override the quality with the one from the Image component
+      continue
+    }
+
+    params.push(imgengPart)
+  }
+
+  newParams.set('imgeng', '/' + params.join('/'))
+
+  return `${root}${newSrc}?${newParams.toString()}`
 }
 
 function cloudinaryLoader({ root, src, width, quality }: LoaderProps): string {
